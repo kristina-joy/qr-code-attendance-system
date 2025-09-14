@@ -3,45 +3,36 @@ include("../conn/conn.php");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_FILES['csvfile']) && $_FILES['csvfile']['error'] === 0) {
+
         $fileTmp = $_FILES['csvfile']['tmp_name'];
         $file = fopen($fileTmp, 'r');
-
-        if (!$file) {
-            header("Location: ../masterlist.php?error=Failed to open CSV file");
-            exit();
-        }
 
         $headerSkipped = false;
         $addedCount = 0;
 
         while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
-            // Skip header row
-            if (!$headerSkipped) { 
-                $headerSkipped = true; 
-                continue; 
-            }
+            if (!$headerSkipped) { $headerSkipped = true; continue; }
 
-            $name = trim($row[0] ?? '');
-            $course = trim($row[1] ?? '');
-            $qrCode = trim($row[2] ?? '');
+            $studentName = $row[0] ?? '';
+            $course = $row[1] ?? '';
+            $year = $row[2] ?? '';
+            $generatedCode = $row[3] ?? uniqid('QR_', true); // use provided QR or generate
 
-            // Auto-generate QR code if empty
-            if (empty($qrCode)) {
-                $qrCode = uniqid('QR_', true);
-            }
-
-            if ($name && $course) {
-                $stmt = $conn->prepare("INSERT INTO tbl_student (student_name, course_section, generated_code) VALUES (:name, :course, :qr)");
-                $stmt->bindParam(':name', $name, PDO::PARAM_STR);
-                $stmt->bindParam(':course', $course, PDO::PARAM_STR);
-                $stmt->bindParam(':qr', $qrCode, PDO::PARAM_STR);
+            if ($studentName && $course) {
+                $stmt = $conn->prepare(
+                    "INSERT INTO tbl_student (student_name, course, year, generated_code) 
+                     VALUES (:student_name, :course, :year, :generated_code)"
+                );
+                $stmt->bindParam(":student_name", $studentName, PDO::PARAM_STR);
+                $stmt->bindParam(":course", $course, PDO::PARAM_STR);
+                $stmt->bindParam(":year", $year, PDO::PARAM_STR);
+                $stmt->bindParam(":generated_code", $generatedCode, PDO::PARAM_STR);
                 $stmt->execute();
                 $addedCount++;
             }
         }
 
         fclose($file);
-
         header("Location: ../masterlist.php?success=Added $addedCount students from CSV");
         exit();
     } else {
@@ -50,3 +41,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
