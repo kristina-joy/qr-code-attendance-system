@@ -6,21 +6,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fileTmp = $_FILES['csvfile']['tmp_name'];
         $file = fopen($fileTmp, 'r');
 
+        if (!$file) {
+            header("Location: ../masterlist.php?error=Failed to open CSV file");
+            exit();
+        }
+
         $headerSkipped = false;
         $addedCount = 0;
 
         while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
-            if (!$headerSkipped) { $headerSkipped = true; continue; }
+            // Skip header row
+            if (!$headerSkipped) { 
+                $headerSkipped = true; 
+                continue; 
+            }
 
-            $name = $row[0] ?? '';
-            $course = $row[1] ?? '';
-            $qrCode = $row[2] ?? uniqid('QR_', true); // use provided QR or generate
+            $name = trim($row[0] ?? '');
+            $course = trim($row[1] ?? '');
+            $qrCode = trim($row[2] ?? '');
+
+            // Auto-generate QR code if empty
+            if (empty($qrCode)) {
+                $qrCode = uniqid('QR_', true);
+            }
 
             if ($name && $course) {
                 $stmt = $conn->prepare("INSERT INTO tbl_student (student_name, course_section, generated_code) VALUES (:name, :course, :qr)");
-                $stmt->bindParam(":name", $name);
-                $stmt->bindParam(":course", $course);
-                $stmt->bindParam(":qr", $qrCode);
+                $stmt->bindParam(':name', $name, PDO::PARAM_STR);
+                $stmt->bindParam(':course', $course, PDO::PARAM_STR);
+                $stmt->bindParam(':qr', $qrCode, PDO::PARAM_STR);
                 $stmt->execute();
                 $addedCount++;
             }
@@ -36,4 +50,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
