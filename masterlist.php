@@ -56,14 +56,29 @@ body {
 .table-container {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: auto;
+    overflow: hidden; /* prevent thead from scrolling */
     position: relative;
 }
 
+/* Table setup */
 #studentTable {
     width: 100% !important;
     table-layout: fixed;
+    border-collapse: collapse;
 }
+
+#studentTable thead, #studentTable tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+#studentTable tbody {
+    display: block;
+    max-height: 500px; /* adjust scroll height */
+    overflow-y: auto;
+}
+
 
 #studentTable td, #studentTable th {
     white-space: nowrap;
@@ -83,14 +98,23 @@ body {
     z-index: 10;
 }
 
+/* Search bar sticky */
 .dataTables_wrapper .dataTables_filter {
     position: sticky;
     top: 0;
-    background: rgba(255, 255, 255, 0.95);
-    z-index: 20;
+    background-color:linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.15) 100%), 
+                radial-gradient(at top center, rgba(255,255,255,0.40) 0%, rgba(0,0,0,0.40) 120%) #989898;
+    color: #1e1b1bff;
+    z-index: 15;
     padding: 10px 0;
 }
+
+.dataTables_wrapper .dataTables_filter input {
+    background-color: #fff;
+    color: #000;
+}
 </style>
+
 </head>
 <body>
 
@@ -140,7 +164,8 @@ body {
                         <th style="width:30px"><input type="checkbox" id="selectAll"></th>
                         <th style="width:50px">#</th>
                         <th style="width:200px">Name</th>
-                        <th style="width:120px">Year & Course</th>
+                        <th style="width:120px">Course</th>
+                        <th style="width:120px">Year</th>
                         <th style="width:150px">Action</th>
                     </tr>
                 </thead>
@@ -153,7 +178,8 @@ body {
                     foreach ($result as $row):
                         $studentID = $row["tbl_student_id"];
                         $studentName = $row["student_name"];
-                        $studentCourse = $row["course_section"];
+                        $studentCourse = $row["course"];
+                        $studentYear = $row["year"];
                         $qrCode = $row["generated_code"];
                 ?>
                     <tr>
@@ -161,6 +187,7 @@ body {
                         <th><?= $counter ?></th>
                         <td><?= $studentName ?></td>
                         <td><?= $studentCourse ?></td>
+                        td><?= $studentYear ?></td>
                         <td>
                             <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#qrCodeModal<?= $studentID ?>">
                                 <img src="https://cdn-icons-png.flaticon.com/512/1341/1341632.png" width="16">
@@ -243,8 +270,12 @@ body {
                 <input type="text" class="form-control" id="studentName" name="student_name" required>
             </div>
             <div class="form-group">
-                <label for="courseSection">Year & Course</label>
-                <input type="text" class="form-control" id="courseSection" name="course_section" required>
+                <label for="course">Course</label>
+                <input type="text" class="form-control" id="course" name="course" required>
+            </div>
+            <div class="form-group">
+                <label for="year">Year</label>
+                <input type="text" class="form-control" id="year" name="year" required>
             </div>
             <div class="form-group">
                 <label for="generatedCode">QR Code (optional)</label>
@@ -276,8 +307,12 @@ body {
                 <input type="text" class="form-control" id="updateStudentName" name="student_name" required>
             </div>
             <div class="form-group">
-                <label for="updateStudentCourse">Year & Course</label>
-                <input type="text" class="form-control" id="updateStudentCourse" name="course_section" required>
+                <label for="updateStudentCourse">Course</label>
+                <input type="text" class="form-control" id="updateStudentCourse" name="course" required>
+            </div>
+            div class="form-group">
+                <label for="updateStudentYear">Year</label>
+                <input type="text" class="form-control" id="updateStudentYear" name="year" required>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -306,7 +341,7 @@ $(document).ready(function() {
         fixedHeader: true,
         info: false,
         columnDefs: [
-            { orderable: false, targets: [0,4] }
+            { orderable: false, targets: [0,5] }
         ]
     });
 
@@ -339,6 +374,7 @@ function openUpdateModal(id){
     var row = $("#studentTable").find("input.studentCheckbox[value='"+id+"']").closest("tr");
     $("#updateStudentName").val(row.find("td:eq(1)").text());
     $("#updateStudentCourse").val(row.find("td:eq(2)").text());
+    $("#updateStudentYear").val(row.find("td:eq(2)").text());
     $("#updateStudentModal").modal("show");
 }
 </script>

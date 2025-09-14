@@ -67,7 +67,7 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item active"><a class="nav-link" href="./events.php">Home</a></li>
-            <li class="nav-item"><a class="nav-link" href="./list_of_students.php">List of Students<span class="sr-only">(current)</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./masterlist.php">List of Students<span class="sr-only">(current)</span></a></li>
             <li class="nav-item"><a class="nav-link" href="./reports.php">Reports</a></li>
         </ul>
         <ul class="navbar-nav ml-auto">

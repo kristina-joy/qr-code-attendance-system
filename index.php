@@ -9,7 +9,7 @@ if (!$eventId) {
 
 // Fetch attendance records for this event only
 $stmt = $conn->prepare("
-    SELECT a.tbl_attendance_id, a.time_in, s.student_name, s.course_section
+    SELECT a.tbl_attendance_id, a.time_in, s.student_name, s.course, s.year
     FROM tbl_attendance a
     LEFT JOIN tbl_student s ON s.tbl_student_id = a.tbl_student_id
     WHERE a.event_id = :event_id
@@ -83,7 +83,7 @@ $result = $stmt->fetchAll();
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item active"><a class="nav-link" href="./events.php">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="./masterlist.php">List of Students</a></li>
+                <li class="nav-item"><a class="nav-link" href="./list_of_students.php">List of Students</a></li>
                 <li class="nav-item"><a class="nav-link" href="./reports.php">Reports</a></li>
             </ul>
             <ul class="navbar-nav ml-auto">
@@ -123,7 +123,8 @@ $result = $stmt->fetchAll();
                             <tr>
                                 <th scope="col">#</th>
                                 <th scope="col">Name</th>
-                                <th scope="col">Course & Section</th>
+                                <th scope="col">Course</th>
+                                <th scope="col">Year</th>
                                 <th scope="col">Time In</th>
                                 <th scope="col">Action</th>
                             </tr>
@@ -134,7 +135,8 @@ $result = $stmt->fetchAll();
                                 <tr>
                                     <td><?= $counter++ ?></td> 
                                     <td><?= htmlspecialchars($row["student_name"]) ?></td>
-                                    <td><?= htmlspecialchars($row["course_section"]) ?></td>
+                                    <td><?= htmlspecialchars($row["course"]) ?></td>
+                                    <td><?= htmlspecialchars($row["year"]) ?></td>
                                     <td><?= $row["time_in"] ?></td>
                                     <td>
                                         <button class="btn btn-danger btn-sm" onclick="deleteAttendance(<?= $row['tbl_attendance_id'] ?>, <?= $eventId ?>)">X</button>
