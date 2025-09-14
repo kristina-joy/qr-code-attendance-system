@@ -56,7 +56,7 @@ body {
 .table-container {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden; /* prevent thead from scrolling */
+    overflow: hidden;
     position: relative;
 }
 
@@ -67,20 +67,8 @@ body {
     border-collapse: collapse;
 }
 
-#studentTable thead, #studentTable tbody tr {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-}
-
-#studentTable tbody {
-    display: block;
-    max-height: 500px; /* adjust scroll height */
-    overflow-y: auto;
-}
-
-
-#studentTable td, #studentTable th {
+#studentTable th, #studentTable td {
+    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -91,19 +79,15 @@ body {
 }
 
 #studentTable thead th {
-    position: sticky;
-    top: 0;
     background-color: #343a40;
     color: #fff;
-    z-index: 10;
 }
 
-/* Search bar sticky */
 .dataTables_wrapper .dataTables_filter {
     position: sticky;
     top: 0;
-    background-color:linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.15) 100%), 
-                radial-gradient(at top center, rgba(255,255,255,0.40) 0%, rgba(0,0,0,0.40) 120%) #989898;
+    background-color: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.15) 100%), 
+                      radial-gradient(at top center, rgba(255,255,255,0.40) 0%, rgba(0,0,0,0.40) 120%) #989898;
     color: #1e1b1bff;
     z-index: 15;
     padding: 10px 0;
@@ -119,32 +103,22 @@ body {
 <body>
 
 <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand ml-4" href="#">QR Code Attendance System</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="./events.php">Home <span class="sr-only">(current)</span></a>
-                </li>
-                <li class="nav-item active">
-                    <a class="nav-link" href="./masterlist.php">List of Students</a>
-                </li>
-                <li class="nav-item ">
-                    <a class="nav-link" href="./reports.php">Reports</a>
-                </li>
-            </ul>
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item mr-3">
-                    <a class="nav-link" href="#">Logout</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand ml-4" href="#">QR Code Attendance System</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item"><a class="nav-link" href="./events.php">Home</a></li>
+            <li class="nav-item active"><a class="nav-link" href="./masterlist.php">List of Students</a></li>
+            <li class="nav-item"><a class="nav-link" href="./reports.php">Reports</a></li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item mr-3"><a class="nav-link" href="#">Logout</a></li>
+        </ul>
+    </div>
+</nav>
 
 <div class="main">
     <div class="student-container">
@@ -171,23 +145,23 @@ body {
                 </thead>
                 <tbody>
                 <?php
-                    $stmt = $conn->prepare("SELECT * FROM tbl_student ORDER BY tbl_student_id ASC");
-                    $stmt->execute();
-                    $result = $stmt->fetchAll();
-                    $counter = 1;
-                    foreach ($result as $row):
-                        $studentID = $row["tbl_student_id"];
-                        $studentName = $row["student_name"];
-                        $studentCourse = $row["course"];
-                        $studentYear = $row["year"];
-                        $qrCode = $row["generated_code"];
+                $stmt = $conn->prepare("SELECT * FROM tbl_student ORDER BY tbl_student_id ASC");
+                $stmt->execute();
+                $result = $stmt->fetchAll();
+                $counter = 1;
+                foreach ($result as $row):
+                    $studentID = $row["tbl_student_id"];
+                    $studentName = $row["student_name"];
+                    $studentCourse = $row["course"];
+                    $studentYear = $row["year"];
+                    $qrCode = $row["generated_code"];
                 ?>
                     <tr>
                         <td><input type="checkbox" class="studentCheckbox" value="<?= $studentID ?>"></td>
                         <th><?= $counter ?></th>
                         <td><?= $studentName ?></td>
                         <td><?= $studentCourse ?></td>
-                        td><?= $studentYear ?></td>
+                        <td><?= $studentYear ?></td>
                         <td>
                             <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#qrCodeModal<?= $studentID ?>">
                                 <img src="https://cdn-icons-png.flaticon.com/512/1341/1341632.png" width="16">
@@ -310,7 +284,7 @@ body {
                 <label for="updateStudentCourse">Course</label>
                 <input type="text" class="form-control" id="updateStudentCourse" name="course" required>
             </div>
-            div class="form-group">
+            <div class="form-group">
                 <label for="updateStudentYear">Year</label>
                 <input type="text" class="form-control" id="updateStudentYear" name="year" required>
             </div>
@@ -334,7 +308,7 @@ body {
 <script>
 $(document).ready(function() {
     var table = $('#studentTable').DataTable({
-        scrollY: '100%',
+        scrollY: '400px',
         scrollX: true,
         scrollCollapse: true,
         paging: false,
@@ -372,9 +346,9 @@ function deleteStudent(id) {
 function openUpdateModal(id){
     $("#updateStudentId").val(id);
     var row = $("#studentTable").find("input.studentCheckbox[value='"+id+"']").closest("tr");
-    $("#updateStudentName").val(row.find("td:eq(1)").text());
-    $("#updateStudentCourse").val(row.find("td:eq(2)").text());
-    $("#updateStudentYear").val(row.find("td:eq(2)").text());
+    $("#updateStudentName").val(row.find("td:eq(0)").next().next().text()); // Name
+    $("#updateStudentCourse").val(row.find("td:eq(0)").next().next().next().text()); // Course
+    $("#updateStudentYear").val(row.find("td:eq(0)").next().next().next().next().text()); // Year
     $("#updateStudentModal").modal("show");
 }
 </script>
