@@ -260,10 +260,6 @@ body {
                 <label for="year">Year</label>
                 <input type="text" class="form-control" id="year" name="year" required>
             </div>
-            <div class="form-group">
-                <label for="generatedCode">QR Code (optional)</label>
-                <input type="text" class="form-control" id="generatedCode" name="generated_code" placeholder="Leave empty to auto-generate">
-            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                 <button type="submit" class="btn btn-dark">Add Student</button>
