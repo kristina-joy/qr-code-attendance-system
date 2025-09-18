@@ -11,22 +11,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $addedCount = 0;
 
         while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
-            if (!$headerSkipped) { $headerSkipped = true; continue; }
+            if (!$headerSkipped) { 
+                $headerSkipped = true; 
+                continue; 
+            }
 
-            $studentName = $row[0] ?? '';
-            $course = $row[1] ?? '';
-            $year = $row[2] ?? '';
-            $generatedCode = $row[3] ?? uniqid('QR_', true); // use provided QR or generate
+            // CSV format: student_id,student_name,course,year
+            $studentId   = trim($row[0] ?? '');
+            $studentName = trim($row[1] ?? '');
+            $course      = trim($row[2] ?? '');
+            $year        = trim($row[3] ?? '');
 
-            if ($studentName && $course) {
-                $stmt = $conn->prepare(
-                    "INSERT INTO tbl_student (student_name, course, year, generated_code) 
-                     VALUES (:student_name, :course, :year, :generated_code)"
-                );
+            if ($studentId && $studentName && $course && $year) {
+                $stmt = $conn->prepare("
+                    INSERT INTO tbl_student (tbl_student_id, student_name, course, year)
+                    VALUES (:student_id, :student_name, :course, :year)
+                    ON DUPLICATE KEY UPDATE 
+                        student_name = VALUES(student_name),
+                        course = VALUES(course),
+                        year = VALUES(year)
+                ");
+                $stmt->bindParam(":student_id", $studentId, PDO::PARAM_STR); // <- student ID as string
                 $stmt->bindParam(":student_name", $studentName, PDO::PARAM_STR);
                 $stmt->bindParam(":course", $course, PDO::PARAM_STR);
                 $stmt->bindParam(":year", $year, PDO::PARAM_STR);
-                $stmt->bindParam(":generated_code", $generatedCode, PDO::PARAM_STR);
                 $stmt->execute();
                 $addedCount++;
             }

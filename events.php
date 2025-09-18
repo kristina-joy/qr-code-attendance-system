@@ -1,12 +1,15 @@
 <?php
+session_start(); // required for session
 include('./conn/conn.php');
+
+
 
 // Handle new event submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_event'])) {
     $name = $_POST['event_name'];
     $date = $_POST['event_date'];
     $desc = $_POST['event_desc'];
-    $created_by = 'Admin'; // placeholder for user, update later
+    $created_by = $_SESSION['user']; // now uses logged-in username
 
     $stmt = $conn->prepare("
         INSERT INTO tbl_events (event_name, event_date, event_desc, created_by) 
@@ -18,6 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_event'])) {
     $stmt->bindParam(':created_by', $created_by);
     $stmt->execute();
 }
+
+
 
 // Fetch events
 $stmt = $conn->prepare("SELECT * FROM tbl_events ORDER BY event_date DESC");

@@ -5,32 +5,25 @@ if (isset($_GET['student'])) {
     $student = $_GET['student'];
 
     try {
-
-        $query = "DELETE FROM tbl_student WHERE tbl_student_id = '$student'";
-
+        // Hard delete
+        $query = "DELETE FROM tbl_student WHERE tbl_student_id = :student";
         $stmt = $conn->prepare($query);
+        $stmt->bindParam(':student', $student, PDO::PARAM_INT);
+        $stmt->execute();
 
-        $query_execute = $stmt->execute();
-
-        if ($query_execute) {
-            echo "
-                <script>
-                    alert('Student deleted successfully!');
-                    window.location.href = 'http://localhost/qr-code-attendance-system/masterlist.php';
-                </script>
-            ";
-        } else {
-            echo "
-                <script>
-                    alert('Failed to delete student!');
-                    window.location.href = 'http://localhost/qr-code-attendance-system/masterlist.php';
-                </script>
-            ";
-        }
-
+        echo "
+            <script>
+                alert('Student deleted successfully!');
+                window.location.href = '../masterlist.php';
+            </script>
+        ";
     } catch (PDOException $e) {
         echo "Error: " . $e->getMessage();
     }
+} else {
+    echo "<script>
+            alert('No student selected!');
+            window.location.href='../masterlist.php';
+          </script>";
 }
-
 ?>

@@ -148,29 +148,40 @@ body {
                 $stmt = $conn->prepare("SELECT * FROM tbl_student ORDER BY tbl_student_id ASC");
                 $stmt->execute();
                 $result = $stmt->fetchAll();
-                $counter = 1;
+                $counter = 1; 
                 foreach ($result as $row):
                     $studentID = $row["tbl_student_id"];
                     $studentName = $row["student_name"];
                     $studentCourse = $row["course"];
                     $studentYear = $row["year"];
                     $qrCode = $row["generated_code"];
+
+                    // Generate QR code if empty
+                    if(empty($qrCode)){
+                        $qrCode = bin2hex(random_bytes(5)); // 10-character random code
+                        $updateStmt = $conn->prepare("UPDATE tbl_student SET generated_code=:code WHERE tbl_student_id=:id");
+                        $updateStmt->bindParam(':code', $qrCode);
+                        $updateStmt->bindParam(':id', $studentID);
+                        $updateStmt->execute();
+                    }
                 ?>
                     <tr>
                         <td><input type="checkbox" class="studentCheckbox" value="<?= $studentID ?>"></td>
-                        <th><?= $counter ?></th>
-                        <td><?= $studentName ?></td>
-                        <td><?= $studentCourse ?></td>
-                        <td><?= $studentYear ?></td>
+                        <th><?= $counter++ ?></th>
+                        <td><?= htmlspecialchars($studentName) ?></td>
+                        <td><?= htmlspecialchars($studentCourse) ?></td>
+                        <td><?= htmlspecialchars($studentYear) ?></td>
                         <td>
                             <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#qrCodeModal<?= $studentID ?>">
                                 <img src="https://cdn-icons-png.flaticon.com/512/1341/1341632.png" width="16">
                             </button>
+
+                            <!-- QR Modal -->
                             <div class="modal fade" id="qrCodeModal<?= $studentID ?>" tabindex="-1" aria-hidden="true">
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title"><?= $studentName ?>'s QR Code</h5>
+                                            <h5 class="modal-title"><?= htmlspecialchars($studentName) ?>'s QR Code</h5>
                                             <button type="button" class="close" data-dismiss="modal">&times;</button>
                                         </div>
                                         <div class="modal-body text-center">
@@ -182,14 +193,12 @@ body {
                                     </div>
                                 </div>
                             </div>
+
                             <button class="btn btn-secondary btn-sm" onclick="openUpdateModal(<?= $studentID ?>)">&#128393;</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteStudent(<?= $studentID ?>)">&#10006;</button>
                         </td>
                     </tr>
-                <?php 
-                    $counter++;
-                    endforeach; 
-                ?>
+                <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
