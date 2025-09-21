@@ -1,33 +1,55 @@
 <?php
-session_start(); // required for session
+session_start();
 include('./conn/conn.php');
 
-
-
-// Handle new event submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_event'])) {
-    $name = $_POST['event_name'];
-    $date = $_POST['event_date'];
-    $desc = $_POST['event_desc'];
-    $created_by = $_SESSION['user']; // now uses logged-in username
-
-    $stmt = $conn->prepare("
-        INSERT INTO tbl_events (event_name, event_date, event_desc, created_by) 
-        VALUES (:name, :date, :desc, :created_by)
-    ");
-    $stmt->bindParam(':name', $name);
-    $stmt->bindParam(':date', $date);
-    $stmt->bindParam(':desc', $desc);
-    $stmt->bindParam(':created_by', $created_by);
-    $stmt->execute();
+// Redirect if not logged in
+if (!isset($_SESSION['user'])) {
+    header('Location: index.php');
+    exit;
 }
 
+// Handle new event submission
+$success = '';
+$error = '';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_event'])) {
+    $name = trim($_POST['event_name']);
+    $date = trim($_POST['event_date']);
+    $desc = trim($_POST['event_desc']);
+    $timein = trim($_POST['time_in']);
+    $timeout = trim($_POST['time_out']);
+    $created_by = $_SESSION['user'];
 
-// Fetch events
-$stmt = $conn->prepare("SELECT * FROM tbl_events ORDER BY event_date DESC");
-$stmt->execute();
-$events = $stmt->fetchAll();
+    if ($name && $date) {
+        try {
+            $stmt = $conn->prepare("
+                INSERT INTO tbl_events (event_name, event_date, event_desc, created_by, time_in, time_out) 
+                VALUES (:name, :date, :desc, :created_by, :time_in, :time_out)
+            ");
+            $stmt->bindParam(':name', $name);
+            $stmt->bindParam(':date', $date);
+            $stmt->bindParam(':desc', $desc);
+            $stmt->bindParam(':created_by', $created_by);
+            $stmt->bindParam(':time_in', $timein);
+            $stmt->bindParam(':time_out', $timeout);
+            $stmt->execute();
+            $success = "Event added successfully!";
+        } catch (PDOException $e) {
+            $error = "Error adding event: " . $e->getMessage();
+        }
+    } else {
+        $error = "Event name and date are required.";
+    }
+}
+
+// Fetch existing events
+try {
+    $stmt = $conn->prepare("SELECT * FROM tbl_events ORDER BY event_date DESC");
+    $stmt->execute();
+    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error = "Error fetching events: " . $e->getMessage();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -76,7 +98,7 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
             <li class="nav-item"><a class="nav-link" href="./reports.php">Reports</a></li>
         </ul>
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item mr-3"><a class="nav-link" href="#">Logout</a></li>
+            <li class="nav-item mr-3"><a class="nav-link" href="logout.php">Logout</a></li>
         </ul>
     </div>
 </nav>
@@ -137,6 +159,14 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
                             <label>Description</label>
                             <textarea name="event_desc" class="form-control"><?= htmlspecialchars($event['event_desc']) ?></textarea>
                         </div>
+                        <div class="form-group">
+                            <label>Time In</label>
+                            <input type="time" name="time_in" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Time Out</label>
+                            <input type="time" name="time_out" class="form-control">
+                        </div>
                       </div>
                       <div class="modal-footer">
                         <button class="btn btn-primary">Save Changes</button>
@@ -173,7 +203,15 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
                 <label>Description</label>
                 <textarea name="event_desc" class="form-control"></textarea>
             </div>
-          </div>
+            <div class="form-group">
+    <label>Time In</label>
+    <input type="time" name="time_in" class="form-control">
+</div>
+<div class="form-group">
+    <label>Time Out</label>
+    <input type="time" name="time_out" class="form-control">
+</div>
+
           <div class="modal-footer">
             <button class="btn btn-primary">Create Event</button>
           </div>

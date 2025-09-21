@@ -1,15 +1,31 @@
 <?php
 session_start();
-include('./conn/conn.php');
 
+// Database connection using PDO
+$servername = "localhost";
+$dbusername = "root";
+$dbpassword = "";
+$dbname = "qr_attendance_db";
+
+try {
+    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $dbusername, $dbpassword);
+    // set the PDO error mode to exception
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // echo "Connection Successful"; // optional
+} catch(PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
+}
+
+// Redirect if already logged in
 if (isset($_SESSION['user'])) {
     header('Location: events.php');
     exit;
 }
 
+// Login logic
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
 
     // Fetch user from database
     $stmt = $conn->prepare("SELECT * FROM tbl_users WHERE username = :username LIMIT 1");
@@ -17,7 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute();
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && password_verify($password, $user['password'])) {
+    // Plain-text password check (no hash)
+    if ($user && $password === $user['password']) {
         $_SESSION['user'] = $user['username'];
         header('Location: events.php');
         exit;
@@ -26,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 
 
 <!DOCTYPE html>
@@ -72,7 +90,10 @@ body {
             <input type="checkbox" class="form-check-input" name="rememberMe">
             <label class="form-check-label">Remember me</label>
         </div>
-        <button type="submit" class="btn btn-primary">Login</button>
+        <button type="button" class="btn btn-primary" onclick="this.closest('form').submit();">
+    Login
+</button>
+
     </form>
 
     <p class="mt-3 text-center text-muted">Use your database login: <strong>admin / admin123</strong></p>

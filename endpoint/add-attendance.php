@@ -1,63 +1,76 @@
 <?php
-session_start();
-
-// Fix include path depending on your folder structure
-include('../conn/conn.php'); // Make sure this path is correct
+include("../conn/conn.php");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    if (!empty($_POST['qr_code']) && !empty($_POST['event_id'])) {
+    if (!empty($_POST['qr_code']) && !empty($_POST['event_id']) && !empty($_POST['action_type'])) {
 
-        $qr_code = trim($_POST['qr_code']);
-        $event_id = intval($_POST['event_id']); // Make sure this is integer
+        $qrCode = trim($_POST['qr_code']);
+        $event_id = intval($_POST['event_id']); 
+        $action_type = $_POST['action_type']; 
+        date_default_timezone_set('Asia/Manila'); 
+        $now = date("Y-m-d H:i:s");
+
 
         try {
-            // Check if student exists by generated_code
-            $stmt = $conn->prepare("SELECT tbl_student_id, student_name FROM tbl_student WHERE generated_code = :qr_code");
-            $stmt->bindParam(':qr_code', $qr_code, PDO::PARAM_STR);
-            $stmt->execute();
-            $student = $stmt->fetch(PDO::FETCH_ASSOC);
+            $selectStmt = $conn->prepare("SELECT tbl_student_id, student_name FROM tbl_student WHERE generated_code = :generated_code");
+            $selectStmt->bindParam(":generated_code", $qrCode, PDO::PARAM_STR);
+            $selectStmt->execute();
+            $student = $selectStmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$student) {
-                echo "<script>alert('Student not found!'); window.location.href='../index.php?event_id=$event_id';</script>";
+                echo "<script>alert('No student found for this QR code'); window.location.href='../index.php?event_id=$event_id';</script>";
                 exit();
             }
 
-            $student_id = $student['tbl_student_id'];
+            $studentID = $student['tbl_student_id'];
 
-            // Check if attendance already exists for this student in this event
-            $stmt = $conn->prepare("SELECT COUNT(*) FROM tbl_attendance WHERE tbl_student_id = :student_id AND event_id = :event_id");
-            $stmt->bindParam(':student_id', $student_id, PDO::PARAM_INT);
-            $stmt->bindParam(':event_id', $event_id, PDO::PARAM_INT);
-            $stmt->execute();
-            $attendanceExists = $stmt->fetchColumn();
+            $checkStmt = $conn->prepare("SELECT * FROM tbl_attendance WHERE tbl_student_id = :student_id AND event_id = :event_id");
+            $checkStmt->bindParam(":student_id", $studentID, PDO::PARAM_INT);
+            $checkStmt->bindParam(":event_id", $event_id, PDO::PARAM_INT);
+            $checkStmt->execute();
+            $attendance = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($attendanceExists > 0) {
-                echo "<script>alert('Attendance already recorded for this student.'); window.location.href='../index.php?event_id=$event_id';</script>";
-                exit();
+            if ($attendance) {
+
+                if ($action_type === 'time_in') {
+                    $updateStmt = $conn->prepare("UPDATE tbl_attendance SET time_in = :time_in WHERE tbl_attendance_id = :id");
+                    $updateStmt->bindParam(":time_in", $now);
+                } else {
+                    $updateStmt = $conn->prepare("UPDATE tbl_attendance SET time_out = :time_out WHERE tbl_attendance_id = :id");
+                    $updateStmt->bindParam(":time_out", $now);
+                }
+                $updateStmt->bindParam(":id", $attendance['tbl_attendance_id']);
+                $updateStmt->execute();
+            } else {
+
+                if ($action_type === 'time_in') {
+                    $insertStmt = $conn->prepare("INSERT INTO tbl_attendance (tbl_student_id, event_id, time_in) VALUES (:student_id, :event_id, :time_in)");
+                    $insertStmt->bindParam(":time_in", $now);
+                } else {
+                    $insertStmt = $conn->prepare("INSERT INTO tbl_attendance (tbl_student_id, event_id, time_out) VALUES (:student_id, :event_id, :time_out)");
+                    $insertStmt->bindParam(":time_out", $now);
+                }
+                $insertStmt->bindParam(":student_id", $studentID, PDO::PARAM_INT);
+                $insertStmt->bindParam(":event_id", $event_id, PDO::PARAM_INT);
+                $insertStmt->execute();
             }
 
-            // Insert attendance
-            $stmt = $conn->prepare("INSERT INTO tbl_attendance (tbl_student_id, event_id, time_in) VALUES (:student_id, :event_id, NOW())");
-            $stmt->bindParam(':student_id', $student_id, PDO::PARAM_INT);
-            $stmt->bindParam(':event_id', $event_id, PDO::PARAM_INT);
-            $stmt->execute();
-
-            $student_name_safe = htmlspecialchars($student['student_name'], ENT_QUOTES, 'UTF-8');
-            echo "<script>alert('Attendance recorded successfully for $student_name_safe!'); window.location.href='../index.php?event_id=$event_id';</script>";
+            $studentNameSafe = htmlspecialchars($student['student_name'], ENT_QUOTES, 'UTF-8');
+            echo "<script>alert('Attendance recorded successfully for $studentNameSafe!'); window.location.href='../index.php?event_id=$event_id';</script>";
             exit();
 
         } catch (PDOException $e) {
             echo "Database error: " . htmlspecialchars($e->getMessage());
+            exit();
         }
 
     } else {
-        echo "<script>alert('QR code or Event ID missing!'); window.location.href='../events.php';</script>";
+        echo "<script>alert('QR code, Event ID, or Action missing!'); window.location.href='../events.php';</script>";
         exit();
     }
 
 } else {
     die("Invalid request method.");
 }
-?>
 

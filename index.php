@@ -1,193 +1,217 @@
-<?php
-session_start(); // required for session
-include('./conn/conn.php');
-
-// Check event ID from GET
-if (!isset($_GET['event_id'])) {
-    echo "<script>alert('No event selected!'); window.location.href='events.php';</script>";
-    exit();
-}
-
-$event_id = intval($_GET['event_id']);
-
-// Fetch event info (optional)
-$stmtEvent = $conn->prepare("SELECT * FROM tbl_events WHERE event_id = :event_id");
-$stmtEvent->bindParam(':event_id', $event_id, PDO::PARAM_INT);
-$stmtEvent->execute();
-$eventInfo = $stmtEvent->fetch();
-if (!$eventInfo) {
-    echo "<script>alert('Event not found!'); window.location.href='events.php';</script>";
-    exit();
-}
-
-// Fetch attendance for this event
-$stmt = $conn->prepare("
-    SELECT tbl_attendance.*, tbl_student.student_name, tbl_student.course, tbl_student.year 
-    FROM tbl_attendance 
-    LEFT JOIN tbl_student ON tbl_student.tbl_student_id = tbl_attendance.tbl_student_id
-    WHERE tbl_attendance.event_id = :event_id
-    ORDER BY tbl_attendance.time_in DESC
-");
-$stmt->bindParam(':event_id', $event_id, PDO::PARAM_INT);
-$stmt->execute();
-$attendanceList = $stmt->fetchAll();
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QR Code Attendance - <?= htmlspecialchars($eventInfo['event_name']) ?></title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Attendance System</title>
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap');
-* { margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-body {
-    background: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.15) 100%), radial-gradient(at top center, rgba(255,255,255,0.40) 0%, rgba(0,0,0,0.40) 120%) #989898;
-    background-blend-mode: multiply,multiply;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-size: cover;
-}
-.main {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 91.5vh;
-}
-.attendance-container {
-    height: 90%;
-    width: 90%;
-    border-radius: 20px;
-    padding: 40px;
-    background-color: rgba(255, 255, 255, 0.8);
-}
-.attendance-container > div {
-    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
-    border-radius: 10px;
-    padding: 30px;
-}
-.attendance-container > div:last-child {
-    width: 64%;
-    margin-left: auto;
-}
-.qr-detected-container { display: none; }
-</style>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.15) 100%), radial-gradient(at top center, rgba(255,255,255,0.40) 0%, rgba(0,0,0,0.40) 120%) #989898;
+            background-blend-mode: multiply,multiply;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .main {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 91.5vh;
+        }
+
+        .attendance-container {
+            height: 90%;
+            width: 90%;
+            border-radius: 20px;
+            padding: 40px;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .attendance-container > div {
+            box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+            border-radius: 10px;
+            padding: 30px;
+        }
+
+        .attendance-container > div:last-child {
+            width: 64%;
+            margin-left: auto;
+        }
+    </style>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <a class="navbar-brand ml-4" href="#">QR Code Attendance System</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav mr-auto">
-            <li class="nav-item"><a class="nav-link" href="./events.php">Home</a></li>
-            <li class="nav-item active"><a class="nav-link" href="./masterlist.php">List of Students</a></li>
-            <li class="nav-item"><a class="nav-link" href="./reports.php">Reports</a></li>
-        </ul>
-        <ul class="navbar-nav ml-auto">
-            <li class="nav-item mr-3"><a class="nav-link" href="#">Logout</a></li>
-        </ul>
-    </div>
-</nav>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand ml-4" href="#">QR Code Attendance System</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-<div class="main">
-    <div class="attendance-container row">
-        <div class="qr-container col-4">
-            <div class="scanner-con">
-                <h5 class="text-center">Scan your QR Code for Attendance</h5>
-                <video id="interactive" class="viewport" width="100%"></video>
-            </div>
-
-            <div class="qr-detected-container">
-                            <form action="./endpoint/add-attendance.php" method="POST">
-                <h4 class="text-center">Student QR Detected!</h4>
-                <input type="hidden" id="detected-qr-code" name="qr_code">
-                <input type="hidden" name="event_id" value="<?= isset($_GET['event_id']) ? intval($_GET['event_id']) : 0 ?>">
-                <button type="submit" class="btn btn-dark form-control">Submit Attendance</button>
-            </form>
-
-            </div>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="./index.php">Home <span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link" href="./masterlist.php">List of Students</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item mr-3">
+                    <a class="nav-link" href="#">Logout</a>
+                </li>
+            </ul>
         </div>
+    </nav>
 
-        <div class="attendance-list col-8">
-            <a href="events.php" class="btn back-btn mb-3" style="background-color: #343a40; color: #fff; border-color: #343a40;">&larr; Back to Events</a>
-            <h4>List of Present Students for <?= htmlspecialchars($eventInfo['event_name']) ?></h4>
-            <div class="table-container table-responsive">
-                <table class="table text-center table-sm" id="attendanceTable">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Name</th>
-                            <th scope="col">Course & Year</th>
-                            <th scope="col">Time In</th>
-                            <th scope="col">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($attendanceList as $row): 
-                            $attendanceID = $row["tbl_attendance_id"];
-                            $studentName = $row["student_name"];
-                            $studentCourse = $row["course"] . ' - ' . $row["year"];
-                            $timeIn = $row["time_in"];
-                        ?>
-                        <tr>
-                            <th scope="row"><?= $attendanceID ?></th>
-                            <td><?= htmlspecialchars($studentName) ?></td>
-                            <td><?= htmlspecialchars($studentCourse) ?></td>
-                            <td><?= htmlspecialchars($timeIn) ?></td>
-                            <td>
-                                <div class="action-button">
-                                    <button class="btn btn-danger delete-button" onclick="deleteAttendance(<?= $attendanceID ?>)">X</button>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+    <div class="main">
+        
+        <div class="attendance-container row">
+            <div class="qr-container col-4">
+                <div class="scanner-con">
+                    <h5 class="text-center">Scan you QR Code here for your attedance</h5>
+                    <video id="interactive" class="viewport" width="100%">
+                </div>
+
+                <div class="qr-detected-container" style="display: none;">
+    <form action="./endpoint/add-attendance.php" method="POST">
+        <h4 class="text-center">Student QR Detected!</h4>
+        <input type="hidden" id="detected-qr-code" name="qr_code">
+        <input type="hidden" name="event_id" value="<?= isset($_GET['event_id']) ? intval($_GET['event_id']) : 0 ?>">
+
+            <div class="btn-group btn-group-toggle d-flex" data-toggle="buttons">
+                <label class="btn btn-success flex-fill">
+                    <input type="radio" name="action_type" value="time_in" required> Time In
+                </label>
+                <label class="btn btn-primary flex-fill">
+                    <input type="radio" name="action_type" value="time_out" required> Time Out
+                </label>
             </div>
-        </div>
-    </div>
+
+
+        <button type="submit" class="btn btn-dark form-control mt-2">Submit Attendance</button>
+    </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
-<script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+            </div>
 
-<script>
-let scanner;
-function startScanner() {
-    scanner = new Instascan.Scanner({ video: document.getElementById('interactive') });
-    scanner.addListener('scan', function (content) {
-        document.getElementById("detected-qr-code").value = content;
-        console.log(content);
-        scanner.stop();
-        document.querySelector(".qr-detected-container").style.display = '';
-        document.querySelector(".scanner-con").style.display = 'none';
-    });
+            <div class="attendance-list">
+                <h4>List of Present Students</h4>
+                <div class="table-container table-responsive">
+                    <table class="table text-center table-sm" id="attendanceTable">
+                        <thead class="thead-dark">
+                            <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Course & Section</th>
+                            <th scope="col">Time In</th>
+                            <th scope="col">Time Out</th>
+                            <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
 
-    Instascan.Camera.getCameras().then(function (cameras) {
-        if (cameras.length > 0) {
-            scanner.start(cameras[0]);
-        } else {
-            console.error('No cameras found.');
-            alert('No cameras found.');
+                            <?php 
+                                include ('./conn/conn.php');
+
+                                $stmt = $conn->prepare("SELECT * FROM tbl_attendance LEFT JOIN tbl_student ON tbl_student.tbl_student_id = tbl_attendance.tbl_student_id");
+                                $stmt->execute();
+                
+                                $result = $stmt->fetchAll();
+                
+                                foreach ($result as $row) {
+                                    $attendanceID = $row["tbl_attendance_id"];
+                                    $studentName = $row["student_name"];
+                                    $studentCourse = $row["course"];
+                                    $studentYear = $row["year"];
+                                    $timeIn = $row["time_in"];
+                                    $timeOut = $row["time_out"];
+                                ?>
+
+                                <tr>
+                                    <th scope="row"><?= $attendanceID ?></th>
+                                    <td><?= $studentName ?></td>
+                                    <td><?= $studentCourse, " - ", $studentYear?></td>
+                                    <td><?= $timeIn ?></td>
+                                    <td><?= $timeOut ?></td>
+                                    <td>
+                                        <div class="action-button">
+                                            <button class="btn btn-danger delete-button" onclick="deleteAttendance(<?= $attendanceID ?>)">X</button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        
+        </div>
+
+    </div>
+    
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+
+    <!-- instascan Js -->
+    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+
+    <script>
+
+        
+        let scanner;
+
+        function startScanner() {
+            scanner = new Instascan.Scanner({ video: document.getElementById('interactive') });
+
+            scanner.addListener('scan', function (content) {
+                $("#detected-qr-code").val(content);
+                console.log(content);
+                scanner.stop();
+                document.querySelector(".qr-detected-container").style.display = '';
+                document.querySelector(".scanner-con").style.display = 'none';
+            });
+
+            Instascan.Camera.getCameras()
+                .then(function (cameras) {
+                    if (cameras.length > 0) {
+                        scanner.start(cameras[0]);
+                    } else {
+                        console.error('No cameras found.');
+                        alert('No cameras found.');
+                    }
+                })
+                .catch(function (err) {
+                    console.error('Camera access error:', err);
+                    alert('Camera access error: ' + err);
+                });
         }
-    }).catch(function (err) {
-        console.error('Camera access error:', err);
-        alert('Camera access error: ' + err);
-    });
-}
-document.addEventListener('DOMContentLoaded', startScanner);
 
-function deleteAttendance(id) {
-    if (confirm("Do you want to remove this attendance?")) {
-        window.location = "./endpoint/delete-attendance.php?attendance=" + id + "&event_id=<?= $event_id ?>";
-    }
-}
-</script>
+        document.addEventListener('DOMContentLoaded', startScanner);
+
+        function deleteAttendance(id) {
+            if (confirm("Do you want to remove this attendance?")) {
+                window.location = "./endpoint/delete-attendance.php?attendance=" + id;
+            }
+        }
+    </script>
 </body>
 </html>
