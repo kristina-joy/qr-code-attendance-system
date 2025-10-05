@@ -97,17 +97,31 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
         <span class="navbar-toggler-icon"></span>
     </button>
+    
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item active"><a class="nav-link" href="./events.php">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="./masterlist.php">List of Students</a></li>
             <li class="nav-item"><a class="nav-link" href="./reports.php">Reports</a></li>
         </ul>
+
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item mr-3"><a class="nav-link" href="#">Logout</a></li>
+            <!-- User Dropdown -->
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown">
+                    <i class="bi bi-person-circle" style="font-size:1.5rem;"></i> <?= htmlspecialchars($_SESSION['user']); ?>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                    <a class="dropdown-item" href="profile.php">Profile</a>
+                    <a class="dropdown-item" href="change-password.php">Change Password</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="logout.php">Logout</a>
+                </div>
+            </li>
         </ul>
     </div>
 </nav>
+
 
 <div class="main">
     <h3 class="mb-4">Events</h3>
@@ -128,24 +142,30 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
         </div>
 
         <!-- Event Cards -->
-        <?php foreach ($events as $event) { ?>
+        <?php foreach ($events as $event) { 
+            // Convert to AM/PM format
+            $formatted_in = date("g:i A", strtotime($event['time_in']));
+            $formatted_out = date("g:i A", strtotime($event['time_out']));
+        ?>
             <div class="col-3">
-                <!-- Clickable Event Card -->
                 <div class="event-card" onclick="window.location.href='index.php?event_id=<?= $event['event_id'] ?>'">
                     <i class="bi bi-folder-fill" style="font-size:50px;"></i>
                     <h6 class="mt-2"><?= htmlspecialchars($event['event_name']) ?></h6>
                     <small><?= $event['event_date'] ?> | <?= htmlspecialchars($event['created_by']) ?></small>
                     <p class="mt-2 text-muted" style="font-size:14px;"><?= htmlspecialchars($event['event_desc']) ?></p>
                     <p class="text-muted" style="font-size:13px;">
-                        🕒 <?= htmlspecialchars($event['time_in']) ?> - <?= htmlspecialchars($event['time_out']) ?>
+                        🕒 <?= $formatted_in ?> - <?= $formatted_out ?>
                     </p>
+                        <p class="text-muted" style="font-size:12px;">
+                            <?php if($event['updated_at'] && $event['updated_at'] != $event['created_at']): ?>
+                                Last updated: <?= date("M d, Y g:i A", strtotime($event['updated_at'])) ?> by <?= htmlspecialchars($event['updated_by']) ?>
+                            <?php endif; ?>
+                        </p>
+
                 </div>
 
-                <!-- Action buttons under card -->
                 <div class="action-buttons text-center">
-                    <!-- Edit -->
                     <button class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editEventModal<?= $event['event_id'] ?>">Edit</button>
-                    <!-- Delete -->
                     <form action="endpoint/delete-event.php" method="POST" style="display:inline;">
                         <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
                         <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this event?')">Delete</button>
@@ -178,11 +198,11 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
                         </div>
                         <div class="form-group">
                             <label>Time In</label>
-                            <input type="time" name="time_in" class="form-control" value="<?= htmlspecialchars($event['time_in']) ?>" required>
+                            <input type="time" name="time_in" class="form-control" value="<?= $event['time_in'] ?>" required>
                         </div>
                         <div class="form-group">
                             <label>Time Out</label>
-                            <input type="time" name="time_out" class="form-control" value="<?= htmlspecialchars($event['time_out']) ?>" required>
+                            <input type="time" name="time_out" class="form-control" value="<?= $event['time_out'] ?>" required>
                         </div>
                       </div>
                       <div class="modal-footer">
@@ -222,11 +242,11 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
             </div>
             <div class="form-group">
                 <label>Time In</label>
-                <input type="time" name="time_in" class="form-control" required>
+                <input type="time" name="time_in" class="form-control" required value="07:00">
             </div>
             <div class="form-group">
                 <label>Time Out</label>
-                <input type="time" name="time_out" class="form-control" required>
+                <input type="time" name="time_out" class="form-control" required value="17:00">
             </div>
           </div>
           <div class="modal-footer">
@@ -242,3 +262,5 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
 </body>
 </html>
+
+
