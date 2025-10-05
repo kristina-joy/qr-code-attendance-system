@@ -7,6 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $studentName = trim($_POST['student_name']);
         $studentCourse = trim($_POST['course']);
         $studentYear = trim($_POST['year']);
+        $$studentIdDVC = trim($_POST['student_id']);
 
         try {
             $stmt = $conn->prepare("
@@ -18,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(":course", $studentCourse, PDO::PARAM_STR);
             $stmt->bindParam(":year", $studentYear, PDO::PARAM_STR);
             $stmt->bindParam(":tbl_student_id", $studentId, PDO::PARAM_INT);
+            $stmt->bindParam(":student_id", $studentIdDVC, PDO::PARAM_INT);
 
             $stmt->execute();
 

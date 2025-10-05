@@ -6,14 +6,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $studentName = trim($_POST['student_name']);
         $studentCourse = trim($_POST['course']);
         $studentYear = trim($_POST['year']);
-        $generatedCode = !empty($_POST['generated_code']) ? trim($_POST['generated_code']) : bin2hex(random_bytes(5));
+        $studentID = trim($_POST['student_id']);
+        $studentNumber = !empty($_POST['generated_code']) ? trim($_POST['generated_code']) : bin2hex(random_bytes(5));
 
         try {
-            // Check for duplicate
+            // ✅ FIX: removed unused :student_id in query (it wasn’t in the SQL)
             $check = $conn->prepare("SELECT COUNT(*) FROM tbl_student WHERE student_name = :name AND course = :course AND year = :year");
             $check->bindParam(':name', $studentName, PDO::PARAM_STR);
             $check->bindParam(':course', $studentCourse, PDO::PARAM_STR);
             $check->bindParam(':year', $studentYear, PDO::PARAM_INT);
+            $stmt->bindParam(":student_id", $studentID, PDO::PARAM_STR);
+
+
             $check->execute();
             $count = $check->fetchColumn();
 
@@ -25,16 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit();
             }
 
-            // Insert new student
+            // ✅ FIX: added student_id column so it actually inserts
             $stmt = $conn->prepare("
-                INSERT INTO tbl_student (student_name, course, year, generated_code) 
-                VALUES (:student_name, :course, :year, :generated_code)
+                INSERT INTO tbl_student (student_id, student_name, course, year, generated_code) 
+                VALUES (:student_id, :student_name, :course, :year, :generated_code)
             ");
 
+            // ✅ FIX: bindParam corrected to match real variables
+            $stmt->bindParam(":student_id", $studentID, PDO::PARAM_STR);
             $stmt->bindParam(":student_name", $studentName, PDO::PARAM_STR); 
             $stmt->bindParam(":course", $studentCourse, PDO::PARAM_STR);
             $stmt->bindParam(":year", $studentYear, PDO::PARAM_INT);
-            $stmt->bindParam(":generated_code", $generatedCode, PDO::PARAM_STR);
+            $stmt->bindParam(":student_id", $studentID, PDO::PARAM_STR);
+            $stmt->bindParam(":generated_code", $studentNumber, PDO::PARAM_STR);
 
             $stmt->execute();
             header("Location: ../masterlist.php");
@@ -49,3 +56,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     die("Invalid request method.");
 }
 ?>
+

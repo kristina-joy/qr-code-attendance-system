@@ -20,22 +20,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_event'])) {
     $timeout = trim($_POST['time_out']);
     $created_by = $_SESSION['user'];
 
+    // Validate required fields
     if ($name && $date) {
-        try {
-            $stmt = $conn->prepare("
-                INSERT INTO tbl_events (event_name, event_date, event_desc, created_by, time_in, time_out) 
-                VALUES (:name, :date, :desc, :created_by, :time_in, :time_out)
-            ");
-            $stmt->bindParam(':name', $name);
-            $stmt->bindParam(':date', $date);
-            $stmt->bindParam(':desc', $desc);
-            $stmt->bindParam(':created_by', $created_by);
-            $stmt->bindParam(':time_in', $timein);
-            $stmt->bindParam(':time_out', $timeout);
-            $stmt->execute();
-            $success = "Event added successfully!";
-        } catch (PDOException $e) {
-            $error = "Error adding event: " . $e->getMessage();
+
+        // ✅ Time validation (backend)
+        if ($timeout <= $timein) {
+            $error = "Invalid time range. Time Out must be later than Time In.";
+        } else {
+            try {
+                $stmt = $conn->prepare("
+                    INSERT INTO tbl_events (event_name, event_date, event_desc, created_by, time_in, time_out) 
+                    VALUES (:name, :date, :desc, :created_by, :time_in, :time_out)
+                ");
+                $stmt->bindParam(':name', $name);
+                $stmt->bindParam(':date', $date);
+                $stmt->bindParam(':desc', $desc);
+                $stmt->bindParam(':created_by', $created_by);
+                $stmt->bindParam(':time_in', $timein);
+                $stmt->bindParam(':time_out', $timeout);
+                $stmt->execute();
+                $success = "Event added successfully!";
+            } catch (PDOException $e) {
+                $error = "Error adding event: " . $e->getMessage();
+            }
         }
     } else {
         $error = "Event name and date are required.";
@@ -90,7 +97,6 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
         <span class="navbar-toggler-icon"></span>
     </button>
-
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item active"><a class="nav-link" href="./events.php">Home</a></li>
@@ -98,13 +104,21 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
             <li class="nav-item"><a class="nav-link" href="./reports.php">Reports</a></li>
         </ul>
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item mr-3"><a class="nav-link" href="logout.php">Logout</a></li>
+            <li class="nav-item mr-3"><a class="nav-link" href="#">Logout</a></li>
         </ul>
     </div>
 </nav>
 
 <div class="main">
     <h3 class="mb-4">Events</h3>
+
+    <?php if($success): ?>
+        <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+    <?php endif; ?>
+    <?php if($error): ?>
+        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
+
     <div class="events-container row">
 
         <!-- Add Event Card -->
@@ -122,6 +136,9 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
                     <h6 class="mt-2"><?= htmlspecialchars($event['event_name']) ?></h6>
                     <small><?= $event['event_date'] ?> | <?= htmlspecialchars($event['created_by']) ?></small>
                     <p class="mt-2 text-muted" style="font-size:14px;"><?= htmlspecialchars($event['event_desc']) ?></p>
+                    <p class="text-muted" style="font-size:13px;">
+                        🕒 <?= htmlspecialchars($event['time_in']) ?> - <?= htmlspecialchars($event['time_out']) ?>
+                    </p>
                 </div>
 
                 <!-- Action buttons under card -->
@@ -161,11 +178,11 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
                         </div>
                         <div class="form-group">
                             <label>Time In</label>
-                            <input type="time" name="time_in" class="form-control">
+                            <input type="time" name="time_in" class="form-control" value="<?= htmlspecialchars($event['time_in']) ?>" required>
                         </div>
                         <div class="form-group">
                             <label>Time Out</label>
-                            <input type="time" name="time_out" class="form-control">
+                            <input type="time" name="time_out" class="form-control" value="<?= htmlspecialchars($event['time_out']) ?>" required>
                         </div>
                       </div>
                       <div class="modal-footer">
@@ -204,14 +221,14 @@ body { font-family: 'Poppins', sans-serif; background: #f1f1f1; }
                 <textarea name="event_desc" class="form-control"></textarea>
             </div>
             <div class="form-group">
-    <label>Time In</label>
-    <input type="time" name="time_in" class="form-control">
-</div>
-<div class="form-group">
-    <label>Time Out</label>
-    <input type="time" name="time_out" class="form-control">
-</div>
-
+                <label>Time In</label>
+                <input type="time" name="time_in" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Time Out</label>
+                <input type="time" name="time_out" class="form-control" required>
+            </div>
+          </div>
           <div class="modal-footer">
             <button class="btn btn-primary">Create Event</button>
           </div>
